@@ -7,6 +7,11 @@ export const patientService = {
     return data;
   },
   
+  getById: async (id: string) => {
+  const { data } = await apiClient.get(`/patients/${id}`);
+  return data;
+  },
+
   create: async (patientData: any) => {
     const { data } = await apiClient.post('/patients', patientData);
     return data;

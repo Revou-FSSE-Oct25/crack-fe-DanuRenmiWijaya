@@ -2,18 +2,17 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientService } from '@/app/services/patient.service';
-import { IdCard, Calendar, MapPin, Trash2 } from 'lucide-react';
+import { IdCard, Calendar, MapPin, Trash2, ChevronRight } from 'lucide-react';
+import Link from 'next/link'; 
 
 export default function PatientTable() {
   const queryClient = useQueryClient();
 
-  // 1. Ambil data pasien
   const { data: patients, isLoading } = useQuery({
     queryKey: ['patients'],
     queryFn: patientService.getAll,
   });
 
-  // 2. Fungsi Hapus
   const deleteMutation = useMutation({
     mutationFn: patientService.delete,
     onSuccess: () => {
@@ -51,17 +50,26 @@ export default function PatientTable() {
               <th className="p-4 font-semibold text-gray-600">Nama Lengkap</th>
               <th className="p-4 font-semibold text-gray-600">Jenis Kelamin</th>
               <th className="p-4 font-semibold text-gray-600">Tanggal Lahir</th>
-              <th className="p-4 font-semibold text-gray-600">Aksi</th>
+              <th className="p-4 font-semibold text-gray-600 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {patients?.map((p: any) => (
-              <tr key={p.id} className="hover:bg-blue-50/50 transition">
+              <tr key={p.id} className="hover:bg-blue-50/50 transition group">
                 <td className="p-4 text-gray-700 font-medium">{p.nik}</td>
-                <td className="p-4 text-gray-700">{p.name}</td>
+                <td className="p-4">
+                  {/* Link ke Detail Pasien */}
+                  <Link 
+                    href={`/patients/${p.id}`} 
+                    className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform"
+                  >
+                    {p.name}
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                </td>
                 <td className="p-4 text-gray-700">{p.gender}</td>
                 <td className="p-4 text-gray-700">{p.birthDate ? new Date(p.birthDate).toLocaleDateString('id-ID') : '-'}</td>
-                <td className="p-4">
+                <td className="p-4 flex justify-center gap-2">
                   <button 
                     onClick={() => handleDelete(p.id, p.name)}
                     className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
@@ -89,7 +97,9 @@ export default function PatientTable() {
             <div className="flex justify-between items-start pr-8">
               <div>
                 <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">{p.nik}</p>
-                <h3 className="font-bold text-gray-900 text-lg">{p.name}</h3>
+                <Link href={`/patients/${p.id}`}>
+                  <h3 className="font-bold text-gray-900 text-lg hover:text-blue-600 transition">{p.name}</h3>
+                </Link>
               </div>
               <span className={`px-2 py-1 rounded text-xs font-bold ${p.gender === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
                 {p.gender}
