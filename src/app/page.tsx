@@ -1,28 +1,45 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
 import { apiClient } from './lib/api-client';
 import PatientForm from './components/forms/patient-form';
 import PatientTable from './components/tables/patient-table';
 import StatsCard from './components/dashboard/stats-card'; 
-import { LogOut, Activity, User, Users, ClipboardList, CalendarCheck, FileSpreadsheet } from "lucide-react";
+import { 
+  LogOut, 
+  Activity, 
+  User, 
+  Users, 
+  ClipboardList, 
+  CalendarCheck, 
+  FileSpreadsheet 
+} from "lucide-react";
 
 export default function HomePage() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
 
-  // Fungsi untuk handle Export Excel
+  // State untuk Filter Laporan
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+
+  // Fungsi untuk handle Export Excel dengan Filter
   const handleExportExcel = async () => {
     try {
-      const response = await apiClient.get('/patients/export/excel', {
-        responseType: 'blob', // Penting agar terbaca sebagai file biner
+      // Mengirim query params ?month=...&year=... ke backend
+      const response = await apiClient.get(`/patients/export/excel?month=${filterMonth}&year=${filterYear}`, {
+        responseType: 'blob',
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Laporan_Pasien_${new Date().toLocaleDateString('id-ID')}.xlsx`);
+      
+      const namaBulan = new Date(0, filterMonth - 1).toLocaleString('id-ID', { month: 'long' });
+      link.setAttribute('download', `Laporan_Pasien_${namaBulan}_${filterYear}.xlsx`);
+      
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -71,7 +88,6 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* CONTENT */}
       <main className="py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
@@ -107,16 +123,46 @@ export default function HomePage() {
           <div className="space-y-10">
             <PatientForm />
             
-            {/* HEADER TABEL DENGAN TOMBOL EXPORT */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800">Manajemen Data Pasien</h2>
-              <button 
-                onClick={handleExportExcel}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95 w-full sm:w-auto justify-center"
-              >
-                <FileSpreadsheet size={18} />
-                Export Excel
-              </button>
+            {/* HEADER TABEL DENGAN FILTER & TOMBOL EXPORT */}
+            <div className="flex flex-col bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">Manajemen Data Pasien</h2>
+              </div>
+              
+              <div className="flex flex-col md:flex-row items-end gap-4 border-t pt-6">
+                <div className="w-full md:w-48">
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Bulan Laporan</label>
+                  <select 
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(Number(e.target.value))}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(0, i).toLocaleString('id-ID', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="w-full md:w-32">
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Tahun</label>
+                  <input 
+                    type="number"
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(Number(e.target.value))}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <button 
+                  onClick={handleExportExcel}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95 w-full md:w-auto justify-center"
+                >
+                  <FileSpreadsheet size={18} />
+                  Export Laporan
+                </button>
+              </div>
             </div>
 
             <PatientTable />
