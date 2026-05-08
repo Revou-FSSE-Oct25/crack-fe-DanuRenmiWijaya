@@ -1,13 +1,26 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
+import { apiClient } from './lib/api-client';
 import PatientForm from './components/forms/patient-form';
 import PatientTable from './components/tables/patient-table';
-import { LogOut, Activity, User } from "lucide-react";
+import StatsCard from './components/dashboard/stats-card'; 
+import { LogOut, Activity, User, Users, ClipboardList, CalendarCheck } from "lucide-react";
 
 export default function HomePage() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+
+  // Ambil Data Statistik Harian dari Backend
+  const { data: stats } = useQuery({
+    queryKey: ['today-stats'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/patients/stats/today');
+      return data;
+    },
+    refetchInterval: 30000, // Refresh otomatis tiap 30 detik
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,9 +59,31 @@ export default function HomePage() {
             <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
               Sistem Informasi Rekam Medis
             </h1>
-            <p className="mt-3 text-gray-500">
+            <p className="mt-3 text-gray-500 mb-8">
               Kelola data pasien dan administrasi rumah sakit dengan mudah dan aman.
             </p>
+
+            {/* SECTION STATISTIK (Baru) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+              <StatsCard 
+                title="Pasien Baru Hari Ini" 
+                value={stats?.newPatients || 0} 
+                icon={Users} 
+                colorClass="bg-blue-50 text-blue-600" 
+              />
+              <StatsCard 
+                title="Kunjungan Medis" 
+                value={stats?.totalVisits || 0} 
+                icon={ClipboardList} 
+                colorClass="bg-emerald-50 text-emerald-600" 
+              />
+              <StatsCard 
+                title="Tanggal Hari Ini" 
+                value={new Date().getDate()} 
+                icon={CalendarCheck} 
+                colorClass="bg-orange-50 text-orange-600" 
+              />
+            </div>
           </div>
 
           <div className="space-y-10">
