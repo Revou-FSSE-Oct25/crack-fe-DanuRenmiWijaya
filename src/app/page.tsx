@@ -7,6 +7,7 @@ import { apiClient } from './lib/api-client';
 import PatientForm from './components/forms/patient-form';
 import PatientTable from './components/tables/patient-table';
 import StatsCard from './components/dashboard/stats-card'; 
+import PatientChart from './components/dashboard/patient-chart'; 
 import { 
   LogOut, 
   Activity, 
@@ -21,25 +22,19 @@ export default function HomePage() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
 
-  // State untuk Filter Laporan
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
-  // Fungsi untuk handle Export Excel dengan Filter
   const handleExportExcel = async () => {
     try {
-      // Mengirim query params ?month=...&year=... ke backend
       const response = await apiClient.get(`/patients/export/excel?month=${filterMonth}&year=${filterYear}`, {
         responseType: 'blob',
       });
-
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
       const namaBulan = new Date(0, filterMonth - 1).toLocaleString('id-ID', { month: 'long' });
       link.setAttribute('download', `Laporan_Pasien_${namaBulan}_${filterYear}.xlsx`);
-      
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -48,7 +43,6 @@ export default function HomePage() {
     }
   };
 
-  // Ambil Data Statistik Harian
   const { data: stats } = useQuery({
     queryKey: ['today-stats'],
     queryFn: async () => {
@@ -89,7 +83,7 @@ export default function HomePage() {
       </nav>
 
       <main className="py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto"> {/* Lebar ditingkatkan sedikit agar chart lega */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
               Sistem Informasi Rekam Medis
@@ -121,9 +115,11 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-10">
+            {/* 2. RENDER GRAFIK BULANAN */}
+            <PatientChart />
+
             <PatientForm />
             
-            {/* HEADER TABEL DENGAN FILTER & TOMBOL EXPORT */}
             <div className="flex flex-col bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-gray-800">Manajemen Data Pasien</h2>
