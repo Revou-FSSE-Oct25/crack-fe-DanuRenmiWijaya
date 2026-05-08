@@ -6,20 +6,39 @@ import { apiClient } from './lib/api-client';
 import PatientForm from './components/forms/patient-form';
 import PatientTable from './components/tables/patient-table';
 import StatsCard from './components/dashboard/stats-card'; 
-import { LogOut, Activity, User, Users, ClipboardList, CalendarCheck } from "lucide-react";
+import { LogOut, Activity, User, Users, ClipboardList, CalendarCheck, FileSpreadsheet } from "lucide-react";
 
 export default function HomePage() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
 
-  // Ambil Data Statistik Harian dari Backend
+  // Fungsi untuk handle Export Excel
+  const handleExportExcel = async () => {
+    try {
+      const response = await apiClient.get('/patients/export/excel', {
+        responseType: 'blob', // Penting agar terbaca sebagai file biner
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Laporan_Pasien_${new Date().toLocaleDateString('id-ID')}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      alert('Gagal mengunduh laporan Excel');
+    }
+  };
+
+  // Ambil Data Statistik Harian
   const { data: stats } = useQuery({
     queryKey: ['today-stats'],
     queryFn: async () => {
       const { data } = await apiClient.get('/patients/stats/today');
       return data;
     },
-    refetchInterval: 30000, // Refresh otomatis tiap 30 detik
+    refetchInterval: 30000,
   });
 
   return (
@@ -63,7 +82,6 @@ export default function HomePage() {
               Kelola data pasien dan administrasi rumah sakit dengan mudah dan aman.
             </p>
 
-            {/* SECTION STATISTIK (Baru) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
               <StatsCard 
                 title="Pasien Baru Hari Ini" 
@@ -88,6 +106,19 @@ export default function HomePage() {
 
           <div className="space-y-10">
             <PatientForm />
+            
+            {/* HEADER TABEL DENGAN TOMBOL EXPORT */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-800">Manajemen Data Pasien</h2>
+              <button 
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95 w-full sm:w-auto justify-center"
+              >
+                <FileSpreadsheet size={18} />
+                Export Excel
+              </button>
+            </div>
+
             <PatientTable />
           </div>
         </div>
