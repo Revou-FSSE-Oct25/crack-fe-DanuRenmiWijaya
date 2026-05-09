@@ -2,32 +2,37 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // 1. Ambil token dari cookie
-  const token = request.cookies.get('token')?.value;
+  const pathname = request.nextUrl.pathname;
 
-  // 2. Tentukan halaman mana saja yang butuh login (proteksi)
-  const isProtectedRoute = 
-    request.nextUrl.pathname === '/' || 
-    request.nextUrl.pathname.startsWith('/dashboard');
+  // 1. Ambil token masing-masing role
+  const adminToken = request.cookies.get('token')?.value;
+  const patientToken = request.cookies.get('patient_token')?.value;
 
-  // 3. Tentukan halaman login
-  const isLoginPage = request.nextUrl.pathname === '/login';
+  // --- AREA ADMIN ---
+  const isAdminRoute = pathname === '/' || pathname.startsWith('/patients');
+  const isAdminLoginPage = pathname === '/login';
 
-  // LOGIKA PROTEKSI:
-  // Jika mencoba akses halaman dashboard tapi TIDAK punya token
-  if (isProtectedRoute && !token) {
+  if (isAdminRoute && !adminToken) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // Jika sudah punya token tapi mencoba akses halaman login lagi
-  if (isLoginPage && token) {
+  if (isAdminLoginPage && adminToken) {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // --- AREA PASIEN (PORTAL) ---
+  const isPatientRoute = pathname.startsWith('/portal/dashboard');
+  const isPatientLoginPage = pathname === '/portal/login';
+
+  if (isPatientRoute && !patientToken) {
+    return NextResponse.redirect(new URL('/portal/login', request.url));
+  }
+  if (isPatientLoginPage && patientToken) {
+    return NextResponse.redirect(new URL('/portal/dashboard', request.url));
   }
 
   return NextResponse.next();
 }
 
-// Konfigurasi agar middleware tidak berjalan di file statis (gambar, dll)
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
