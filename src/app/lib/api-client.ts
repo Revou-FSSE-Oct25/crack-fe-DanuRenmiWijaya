@@ -6,9 +6,15 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = Cookies.get('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Ambil token admin atau token pasien
+  const adminToken = Cookies.get('token');
+  const patientToken = Cookies.get('patient_token');
+  
+  // Gunakan token yang tersedia
+  const activeToken = adminToken || patientToken;
+
+  if (activeToken) {
+    config.headers.Authorization = `Bearer ${activeToken}`;
   }
   return config;
 });

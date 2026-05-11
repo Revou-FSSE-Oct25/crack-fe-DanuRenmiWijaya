@@ -1,10 +1,17 @@
 'use client';
 
+import { useState, useEffect } from 'react'; // 1. Tambahkan useEffect & useState
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/app/lib/api-client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function PatientChart() {
+  const [isMounted, setIsMounted] = useState(false); // 2. State untuk handle hydration
+
+  useEffect(() => {
+    setIsMounted(true); // 3. Set true setelah komponen masuk ke DOM browser
+  }, []);
+
   const { data: chartData, isLoading } = useQuery({
     queryKey: ['monthly-stats'],
     queryFn: async () => {
@@ -13,7 +20,14 @@ export default function PatientChart() {
     },
   });
 
-  if (isLoading) return <div className="h-[300px] flex items-center justify-center">Memuat grafik...</div>;
+  // Tampilkan loading/placeholder dengan tinggi tetap agar layout tidak melompat
+  if (isLoading || !isMounted) {
+    return (
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mt-10 h-[400px] flex items-center justify-center">
+        <div className="text-slate-400 animate-pulse">Memuat grafik kunjungan...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mt-10">
@@ -22,9 +36,10 @@ export default function PatientChart() {
         <p className="text-sm text-gray-500">Statistik pendaftaran pasien baru per bulan di tahun {new Date().getFullYear()}</p>
       </div>
 
-      <div className="h-[300px] w-full">
+      {/* 4. Berikan h-[300px] eksplisit pada kontainer pembungkus */}
+      <div className="h-[300px] w-full min-h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis 
               dataKey="name" 

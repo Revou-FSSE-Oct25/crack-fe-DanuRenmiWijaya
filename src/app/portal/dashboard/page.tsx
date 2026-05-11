@@ -1,11 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ClipboardList, CalendarPlus, LogOut, User, ChevronRight,Activity } from 'lucide-react';
+import { ClipboardList, CalendarPlus, LogOut, User, ChevronRight,Activity,Users,Clock,Loader2} from 'lucide-react';
 import Cookies from 'js-cookie';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/app/lib/api-client';
 
 export default function PatientDashboard() {
   const router = useRouter();
+
+  // 1. Query untuk Tracking Status (Real-time)
+  const { data: track } = useQuery({
+    queryKey: ['tracking'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/appointments/track');
+      return data;
+    },
+    refetchInterval: 10000, // Cek status tiap 10 detik
+  });
 
   const handleLogout = () => {
     Cookies.remove('patient_token');
@@ -32,9 +44,51 @@ export default function PatientDashboard() {
         </div>
       </nav>
 
-      {/* Menu Utama (Tombol Besar) */}
+      {/* Konten Utama */}
       <main className="max-w-md mx-auto px-6 -mt-8 space-y-4">
-        {/* Tombol Daftar Kunjungan */}
+        
+        {/* WIDGET TRACKING & STATUS (Muncul jika ada antrean) */}
+        {track && (
+          <div className="bg-white rounded-3xl p-6 shadow-xl border-l-8 border-orange-500 mb-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Antrean Aktif</p>
+                <h4 className="text-lg font-bold text-slate-800">{track.department}</h4>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                track.status === 'CALLING' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-orange-100 text-orange-600'
+              }`}>
+                {track.status === 'CALLING' ? '● Dipanggil' : 'Menunggu'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-slate-50 p-2 rounded-xl text-slate-500"><Users size={18}/></div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Sisa Antrean</p>
+                  <p className="text-sm font-bold text-slate-700">{track.peopleAhead} Orang</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-slate-50 p-2 rounded-xl text-slate-500"><Clock size={18}/></div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Estimasi</p>
+                  <p className="text-sm font-bold text-slate-700">±{track.estimatedWait} Menit</p>
+                </div>
+              </div>
+            </div>
+            
+            {track.status === 'CALLING' && (
+              <div className="mt-4 p-3 bg-red-50 text-red-700 text-[11px] rounded-xl font-bold flex items-center gap-2">
+                <Loader2 className="animate-spin" size={14} />
+                NOMOR ANDA SEDANG DIPANGGIL! Segera ke ruang periksa.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Menu Utama */}
         <button 
           onClick={() => router.push('/portal/booking')}
           className="w-full bg-white p-6 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-5 transition active:scale-95 group"
@@ -49,7 +103,6 @@ export default function PatientDashboard() {
           <ChevronRight className="text-slate-300" />
         </button>
 
-        {/* Tombol Lihat Hasil Pemeriksaan */}
         <button 
           onClick={() => router.push('/portal/history')}
           className="w-full bg-white p-6 rounded-3xl shadow-xl border border-slate-100 flex items-center gap-5 transition active:scale-95 group"
@@ -66,11 +119,11 @@ export default function PatientDashboard() {
 
         {/* Info Cepat */}
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mt-8">
-          <div className="flex gap-3">
-            <User className="text-amber-600" />
+          <div className="flex gap-3 text-left">
+            <User className="text-amber-600 shrink-0" />
             <div>
-              <p className="text-xs font-bold text-amber-600 uppercase">Informasi Penting</p>
-              <p className="text-sm text-amber-800">Gunakan NIK Anda sebagai identitas utama saat tiba di rumah sakit.</p>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-tighter">Informasi Penting</p>
+              <p className="text-[11px] text-amber-800 leading-relaxed">Gunakan NIK Anda sebagai identitas utama saat tiba di rumah sakit.</p>
             </div>
           </div>
         </div>
