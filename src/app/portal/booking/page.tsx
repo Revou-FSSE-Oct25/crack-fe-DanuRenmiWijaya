@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation'; 
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/app/lib/api-client';
-import { Calendar, ChevronLeft, Stethoscope, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar, ChevronLeft, Clock, CheckCircle2 } from 'lucide-react';
 
 const POLI_OPTIONS = [
   { id: 'umum', name: 'Poli Umum', icon: '🩺' },
@@ -15,17 +15,43 @@ const POLI_OPTIONS = [
 
 export default function PatientBooking() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit'); 
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     visitDate: '',
     department: '',
   });
 
+  const { data: bookings } = useQuery({
+    queryKey: ['my-bookings'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/appointments/my-appointments');
+      return data;
+    },
+    enabled: !!editId,
+  });
+
+  useEffect(() => {
+    if (editId && bookings) {
+      const currentBooking = bookings.find((b: any) => b.id === editId);
+      if (currentBooking) {
+        setFormData({
+          department: currentBooking.department,
+          visitDate: new Date(currentBooking.visitDate).toISOString().split('T')[0],
+        });
+        setStep(2);
+      }
+    }
+  }, [editId, bookings]);
+
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Pastikan Anda sudah membuat endpoint POST /appointments di Backend
-      const { data: response } = await apiClient.post('/appointments', data);
-      return response;
+     if (editId) {
+    return await apiClient.patch(`/appointments/${editId}`, data); 
+    }
+    return await apiClient.post('/appointments', data);
     },
     onSuccess: () => setStep(3),
   });
@@ -33,7 +59,6 @@ export default function PatientBooking() {
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-md mx-auto">
-        {/* Header Navigasi */}
         <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 mb-6">
           <ChevronLeft size={20} /> Kembali
         </button>
@@ -60,7 +85,9 @@ export default function PatientBooking() {
 
         {step === 2 && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">Pilih Tanggal</h2>
+            <h2 className="text-2xl font-bold text-slate-800">
+              {editId ? 'Ubah Jadwal Kunjungan' : 'Pilih Tanggal'}
+            </h2>
             <div className="bg-white p-6 rounded-3xl shadow-sm space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
@@ -68,6 +95,7 @@ export default function PatientBooking() {
                 </label>
                 <input
                   type="date"
+                  value={formData.visitDate}
                   min={new Date().toISOString().split('T')[0]}
                   className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600"
                   onChange={(e) => setFormData({ ...formData, visitDate: e.target.value })}
@@ -84,7 +112,7 @@ export default function PatientBooking() {
                 disabled={!formData.visitDate || mutation.isPending}
                 className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 disabled:bg-slate-200 transition"
               >
-                {mutation.isPending ? 'Memproses...' : 'Konfirmasi Pendaftaran'}
+                {mutation.isPending ? 'Memproses...' : editId ? 'Simpan Perubahan' : 'Konfirmasi Pendaftaran'}
               </button>
             </div>
           </div>
@@ -96,8 +124,12 @@ export default function PatientBooking() {
               <CheckCircle2 size={48} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Berhasil Didaftar!</h2>
-              <p className="text-slate-500 mt-2">Silakan tunjukkan NIK Anda di loket saat hari kedatangan.</p>
+              <h2 className="text-2xl font-bold text-slate-800">
+                {editId ? 'Perubahan Disimpan!' : 'Berhasil Didaftar!'}
+              </h2>
+              <p className="text-slate-500 mt-2">
+                {editId ? 'Jadwal kunjungan Anda telah diperbarui.' : 'Silakan tunjukkan NIK Anda di loket saat hari kedatangan.'}
+              </p>
             </div>
             <button
               onClick={() => router.push('/portal/dashboard')}

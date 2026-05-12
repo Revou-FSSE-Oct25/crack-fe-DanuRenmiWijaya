@@ -1,22 +1,37 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { appointmentService } from '@/app/services/appointment.service';
 import { ChevronLeft, Calendar, MapPin, Ticket } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '@/app/lib/api-client';
 
 export default function PatientHistory() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: appointmentService.getMyBookings,
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/appointments/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+      alert('Pendaftaran berhasil dibatalkan');
+    }
+  });
+
+  const handleCancel = (id: string) => {
+    if (confirm('Yakin ingin membatalkan pendaftaran ini?')) {
+      cancelMutation.mutate(id);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-md mx-auto">
-        {/* Header Navigasi */}
         <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 mb-6">
           <ChevronLeft size={20} /> Kembali
         </button>
@@ -29,7 +44,6 @@ export default function PatientHistory() {
           <div className="space-y-4">
             {bookings?.map((booking: any) => (
               <div key={booking.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
-                {/* Badge Status */}
                 <div className="absolute top-0 right-0 px-4 py-1 bg-blue-100 text-blue-600 text-[10px] font-bold rounded-bl-xl uppercase">
                   {booking.status}
                 </div>
@@ -53,6 +67,32 @@ export default function PatientHistory() {
                     <Calendar size={16} className="text-blue-500" />
                     <span>{new Date(booking.visitDate).toLocaleDateString('id-ID', { dateStyle: 'long' })}</span>
                   </div>
+                </div>
+
+                {/* TOMBOL AKSI HARUS DI SINI (DI DALAM MAP) */}
+                <div className="flex gap-2 mt-6">
+                  {booking.status === 'PENDING' && (
+                    <>
+                      <button 
+                        onClick={() => handleCancel(booking.id)}
+                        disabled={cancelMutation.isPending}
+                        className="flex-1 py-3 text-xs font-bold text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition active:scale-95 disabled:opacity-50"
+                      >
+                        {cancelMutation.isPending ? 'Memproses...' : 'Batalkan'}
+                      </button>
+                      <button 
+                        onClick={() => router.push(`/portal/booking?edit=${booking.id}`)}
+                        className="flex-1 py-3 text-xs font-bold text-blue-600 bg-blue-50 rounded-2xl hover:bg-blue-100 transition active:scale-95"
+                      >
+                        Ubah Jadwal
+                      </button>
+                    </>
+                  )}
+                  {booking.status === 'CANCELLED' && (
+                    <div className="w-full py-3 text-center text-xs font-bold text-gray-400 bg-gray-50 rounded-2xl italic">
+                      Pendaftaran telah dibatalkan
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
