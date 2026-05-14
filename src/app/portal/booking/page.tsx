@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; 
 import { useRouter, useSearchParams } from 'next/navigation'; 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/app/lib/api-client';
@@ -13,7 +13,7 @@ const POLI_OPTIONS = [
   { id: 'dalam', name: 'Poli Penyakit Dalam', icon: '🍕' },
 ];
 
-export default function PatientBooking() {
+function BookingFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit'); 
@@ -48,10 +48,10 @@ export default function PatientBooking() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-     if (editId) {
-    return await apiClient.patch(`/appointments/${editId}`, data); 
-    }
-    return await apiClient.post('/appointments', data);
+      if (editId) {
+        return await apiClient.patch(`/appointments/${editId}`, data); 
+      }
+      return await apiClient.post('/appointments', data);
     },
     onSuccess: () => setStep(3),
   });
@@ -59,6 +59,7 @@ export default function PatientBooking() {
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-md mx-auto">
+        {/* Header Navigasi */}
         <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 mb-6">
           <ChevronLeft size={20} /> Kembali
         </button>
@@ -141,5 +142,13 @@ export default function PatientBooking() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PatientBooking() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 font-medium">Memuat Formulir...</div>}>
+      <BookingFormContent />
+    </Suspense>
   );
 }
